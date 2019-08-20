@@ -1,4 +1,5 @@
 The Surprising Sanity of Using a Cache but Not Updating It
+==========================================================
 
 A while ago we added some client side caching to a biggish application at work,
 as you do. This led to an interesting observation I would like to share:
@@ -22,7 +23,8 @@ quality screenshot from our monitoring system (too much noise to be usable
 here), but the following graph shows the same behavior from a monte-carlo
 simulation built to experiment with this behavior:
 
-[pic]
+
+![weirdness1](weirdness1.svg)
 
 The simulation takes a simple LRU cache with a maximum size of 1000 entries.
 Access is following a poisson distribution with 50% of all hits going into the
