@@ -1,0 +1,133 @@
+#!/usr/bin/env perl6
+
+# let's simluate how a cache degrades when being hit with a linear scan
+
+# first of all a really trivial LRU cache. This could be much more clever,
+# performant and thread-safe but it's good enought for the simulation and
+# concise
+my class LRUCache {
+
+    my class Entry {
+        has $.key;
+        has $.value is rw;
+        has Entry $.older is rw;
+        has Entry $.younger is rw;
+    }
+
+    has $.max-size;
+    has &.producer;
+    has %!entries;
+    has Entry $!youngest;
+    has Entry $!oldest;
+    has $!hits = 0;
+    has $!misses = 0;
+
+    method !unlink($entry) {
+        if $!youngest === $entry {
+            $!youngest = $entry.older;
+        }
+        if $!oldest === $entry {
+            $!oldest = $entry.younger;
+        }
+        if defined $entry.older {
+            $entry.older.younger = $entry.younger;
+            $entry.older = Nil;
+        }
+        if defined $entry.younger {
+            $entry.younger.older = $entry.older;
+            $entry.younger = Nil;
+        }
+    }
+
+    method !link($entry) {
+        if defined $!youngest {
+            $!youngest.younger = $entry;
+        }
+        $entry.older = $!youngest;
+        $!youngest = $entry;
+        if ! defined $!oldest {
+            $!oldest = $entry;
+        }
+    }
+
+    method get($key) {
+        while %!entries.elems > $!max-size {
+            my $evicted = $!oldest;
+            %!entries{$evicted.key}:delete;
+            self!unlink($evicted);
+        }
+        my $entry = %!entries{$key};
+        if defined $entry {
+            self!unlink($entry);
+            self!link($entry);
+            $!hits++;
+        }
+        else {
+            $entry = Entry.new(key => $key, value => &!producer($key));
+            self!link($entry);
+            %!entries{$key} = $entry;
+            $!misses++; 
+        }
+        return $entry.value;
+    }
+
+    method hits-misses() {
+        my @ret = ($!hits, $!misses);
+        $!hits = 0;
+        $!misses = 0;
+        return @ret;
+    }
+}
+
+# generate poisson-distributed events with a mean distance as per arg
+sub random-poisson-distance($average-distance) is export {
+    return 1.rand.log * $average-distance * -1;
+}
+
+# configuration for the simulation, play with these!
+my $reps = 100;
+my $cache-size = 1000;
+my $total-items = 10000;
+my $runtime = 100;
+my $calls-per-time = 100;
+
+# the actual mote-carlo simulation
+my @sums;
+my @raw;
+for ^$reps {
+    my $cache = LRUCache.new(max-size => $cache-size, producer => sub ($k) { return $k; });
+    for ^$runtime -> $i {
+        for ^$calls-per-time -> $j {
+            my $p = $total-items;
+            while $p >= $total-items {
+                $p = random-poisson-distance(300).Int
+            }
+            $cache.get($p);
+        }
+        my @hits-misses = $cache.hits-misses();
+        my $hit-ratio = @hits-misses[0] / $calls-per-time;
+        @sums[$i] += $hit-ratio;
+        @raw[$i].push($hit-ratio);
+        
+        # our linear scan event
+        if $i == ($runtime / 2).Int {
+            for ^$total-items -> $k {
+                $cache.get($k);
+                $cache.hits-misses();
+            }
+        }
+    }
+}
+
+# calculate variance and print results
+my @avg = @sums.map( -> $i { $i / $reps; });
+my @variance;
+for ^100 -> $i {
+    for @(@raw[$i]) -> $c {
+        my $cvar = ($c - @avg[$i]) ** 2;
+        @variance[$i] += $cvar;
+    }
+}
+for ^@sums.elems -> $i {
+    say "$i @avg[$i] {sqrt(@variance[$i] / ($reps - 1))}";
+}
