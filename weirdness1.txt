@@ -28,7 +28,7 @@ The simulation takes a simple LRU cache with a maximum size of 1000 entries.
 Access is following a poisson distribution with 50% of all hits going into the
 first 300 cache entries, and a total of 10000 things that could be cached. The
 simulation makes 100 calls per time unit, and is run 100 times to get averages
-and deviation. The simulation code can be found here. 
+and deviation. The simulation code can be found at https://github.com/robertlemmen/cache-weirdness/blob/master/cache-sim1
 You can clearly see the cache starting cold with a low hit rate, 
 then warming up and reaching something resembling steady-state around 30 of 
 whatever that timeunit is. All matching what one would expect.
@@ -43,9 +43,9 @@ suddenly and sadly makes perfect sense!
 
 In our case we ended up still using the cache, but in this call arc we do not update it when
 there is a cache miss, a capability I also added to my
-perl6-cache-async library. But I guess the benefits of using the cache for this 
-access type are not that great and just bypassing the cache entirely would have been
-fine as well.
+perl6-cache-async library (https://github.com/robertlemmen/perl6-cache-async). But I 
+guess the benefits of using the cache for this access type are not that great and just 
+bypassing the cache entirely would have been fine as well.
 
 More interesting than the code-level fixes are the design consequences though:
 Having different code paths for access to the same data, just with different
