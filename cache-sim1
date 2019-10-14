@@ -91,7 +91,7 @@ my $total-items = 10000;
 my $runtime = 100;
 my $calls-per-time = 100;
 
-# the actual mote-carlo simulation
+# the actual monte-carlo simulation
 my @sums;
 my @raw;
 for ^$reps {
